@@ -1,0 +1,419 @@
+local Library = loadstring(game:HttpGetAsync("https://github.com/ActualMasterOogway/Fluent-Renewed/releases/latest/download/Fluent.luau"))()
+local SaveManager = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ActualMasterOogway/Fluent-Renewed/master/Addons/SaveManager.luau"))()
+local InterfaceManager = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/ActualMasterOogway/Fluent-Renewed/master/Addons/InterfaceManager.luau"))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local PathfindingService = game:GetService("PathfindingService")
+local StarterGui = game:GetService("StarterGui")
+local VirtualUser = game:GetService("VirtualUser")
+
+local LocalPlayer = Players.LocalPlayer
+
+local Window = Library:Window{
+    Title = "CHub - Waste Time chapter 3",
+    SubTitle = "By ??? :)",
+    TabWidth = 100,
+    Size = UDim2.fromOffset(425, 375),
+    Resize = false,
+    Acrylic = true,
+    Theme = "VS Dark",
+    MinimizeKey = Enum.KeyCode.LeftShift
+}
+
+local Tabs = {
+    mainTab = Window:CreateTab{Title = "Main Game", Icon = "phosphor-game-controller-bold"},
+    upgrades = Window:CreateTab{Title = "Upgrades", Icon = "phosphor-game-controller-bold"},
+    tp = Window:CreateTab{Title = "Teleports", Icon = "phosphor-fast-forward-bold"},
+    player = Window:CreateTab{Title = "Player", Icon = "phosphor-person-bold"},
+    performance = Window:CreateTab{Title = "Performance", Icon = "phosphor-device-tablet-bold"},
+    Settings = Window:CreateTab{Title = "Settings", Icon = "phosphor-gear-bold"}
+}
+
+local Options = Library.Options
+
+local function notify(title, text)
+    StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = 3
+    })
+end
+
+local function getCharacter()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local root = character:WaitForChild("HumanoidRootPart")
+    return character, humanoid, root
+end
+
+local function getRoot(char)
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function getHumanoid(char)
+    return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+Tabs.mainTab:CreateToggle("AutoConvert", {
+    Title = "Auto Convert",
+    Default = false
+}):OnChanged(function(state)
+    if state then
+        task.spawn(function()
+            local connection
+            connection = RunService.Heartbeat:Connect(function()
+                if not Options.AutoConvert.Value then
+                    if connection then connection:Disconnect() end
+                    return
+                end
+
+                local _, _, root = getCharacter()
+                root.CFrame = CFrame.new(53, 9, -114)
+            end)
+        end)
+    end
+end)
+
+local RunService = game:GetService("RunService")
+local START_POSITION2 = Vector3.new(-660, 996, -7103)
+local TARGET_POSITION2 = Vector3.new(-630, 997.7, -7083)
+
+local connection = nil
+
+Tabs.mainTab:CreateToggle("TPDarkEssence", {
+    Title = "TP Dark Essence Area",
+    Default = false
+}):OnChanged(function(state)
+    if state then
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        local humanoid = getHumanoid(character)
+        local root = getRoot(character)
+        if not humanoid or not root then return end
+
+        root.CFrame = CFrame.new(START_POSITION2)
+        task.wait(0.1)
+
+        local path = PathfindingService:CreatePath()
+        path:ComputeAsync(root.Position, TARGET_POSITION2)
+
+        local waypoints = path:GetWaypoints()
+        for _, waypoint in ipairs(waypoints) do
+            if not Options.TPDarkEssence.Value then return end
+
+            humanoid:MoveTo(waypoint.Position)
+            if waypoint.Action == Enum.PathWaypointAction.Jump then
+                humanoid.Jump = true
+            end
+            humanoid.MoveToFinished:Wait()
+        end
+
+        if Options.TPDarkEssence.Value then
+            connection = RunService.Heartbeat:Connect(function()
+                if root.Parent then  -- Ensure root still exists
+                    root.CFrame = CFrame.new(TARGET_POSITION2)
+                end
+            end)
+        end
+
+    else
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = getHumanoid(character)
+            local root = getRoot(character)
+
+            if humanoid then
+                humanoid.WalkSpeed = 16
+                humanoid.JumpPower = 50
+                humanoid.AutoRotate = true
+            end
+        end
+    end
+end)
+
+
+Tabs.upgrades:CreateToggle("UpgradeApples", {
+    Title = "Upgrade Apples",
+    Default = false
+}):OnChanged(function(state)
+    if state then
+        task.spawn(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local UpgradeEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("UpgradeEvent")
+
+            while Options.UpgradeApples.Value do
+                UpgradeEvent:FireServer("PillarUpgrade", "Apples")
+                task.wait(0.001)
+            end
+        end)
+    end
+end)
+
+Tabs.upgrades:CreateToggle("UpgradeBerries", {
+    Title = "Upgrade Berries",
+    Default = false
+}):OnChanged(function(state)
+    if state then
+        task.spawn(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local UpgradeEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("UpgradeEvent")
+
+            while Options.UpgradeBerries.Value do
+                UpgradeEvent:FireServer("PillarUpgrade", "Berries")
+                task.wait(0.001)
+            end
+        end)
+    end
+end)
+
+local essenceEnabled = false
+local statsEnabled = false
+
+local function fireNamedProx(name)
+    for _, descendant in ipairs(workspace:GetDescendants()) do
+        if descendant:IsA("ProximityPrompt") and (descendant.Name == name or descendant.Parent.Name == name) then
+            fireproximityprompt(descendant)
+        end
+    end
+end
+
+Tabs.upgrades:CreateToggle("UpgradeDarkEssence", {
+    Title = "Upgrade Dark Essence",
+    Default = false,
+    Callback = function(value)
+        essenceEnabled = value
+        if value then
+            spawn(function()
+                while essenceEnabled do
+                    fireNamedProx("EssenceProx")
+                    task.wait(5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.upgrades:CreateToggle("UpgradeMoreStats", {
+    Title = "Upgrade More Stats",
+    Default = false,
+    Callback = function(value)
+        statsEnabled = value
+        if value then
+            spawn(function()
+                while statsEnabled do
+                    fireNamedProx("MoreStatsProx")
+                    task.wait(5)
+                end
+            end)
+        end
+    end
+})
+
+local ZonesDropdown = Tabs.tp:CreateDropdown("ZoneSelect", {
+    Title = "Zones",
+    Values = {
+        "Level",
+        "Lanterns", 
+        "Day and Night",
+        "Fruits/Automation",
+        "Ruined-Scapes Portal",
+        "Dark Essence Converter",
+        "Dark Essence Zone"
+    },
+    Default = "Level"
+})
+
+local ZonePositions = {
+    ["Level"] = Vector3.new(110, 90, -236),
+    ["Lanterns"] = Vector3.new(259, 103, -240),
+    ["Day and Night"] = Vector3.new(339, 148, -172),
+    ["Fruits/Automation"] = Vector3.new(191, 174, -165),
+    ["Ruined-Scapes Portal"] = Vector3.new(288, 181, 36),
+    ["Dark Essence Converter"] = Vector3.new(-668, 955, -6985),
+    ["Dark Essence Zone"] = Vector3.new(-658, 996, -7101)
+}
+
+Tabs.tp:CreateButton({
+    Title = "Teleport",
+    Description = "Teleport to selected zone",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local character = player.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        
+        local position = ZonePositions[ZonesDropdown.Value]
+        if position and root then
+            root.CFrame = CFrame.new(position)
+        end
+    end
+})
+
+local tpwalking
+local tpSpeed = 1
+local jumpPowerValue = 50
+
+Tabs.player:CreateSlider("TPWalkSpeed", {
+    Title = "Walk Speed",
+    Description = "",
+    Default = 0.2,
+    Min = 0.2,
+    Max = 10,
+    Rounding = 1,
+    Callback = function(Value)
+        tpSpeed = Value
+    end
+})
+
+local function startTPWalk()
+    if tpwalking then
+        tpwalking:Disconnect()
+    end
+
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
+
+    tpwalking = RunService.Heartbeat:Connect(function(delta)
+        if not (character and humanoid and humanoid.Parent) then
+            if tpwalking then tpwalking:Disconnect() end
+            return
+        end
+
+        if humanoid.MoveDirection.Magnitude > 0 then
+            character:TranslateBy(humanoid.MoveDirection * tpSpeed * delta * 10)
+        end
+    end)
+end
+
+startTPWalk()
+
+Tabs.player:CreateSlider("JumpPower", {
+    Title = "Jump Power",
+    Description = "",
+    Default = 50,
+    Min = 50,
+    Max = 300,
+    Rounding = 1,
+    Callback = function(Value)
+        jumpPowerValue = Value
+
+        local character = LocalPlayer.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+        if humanoid then
+            if humanoid.UseJumpPower then
+                humanoid.JumpPower = jumpPowerValue
+            else
+                humanoid.JumpHeight = jumpPowerValue
+            end
+        end
+    end
+})
+
+Tabs.player:CreateButton({
+    Title = "FullBright",
+    Description = "",
+    Callback = function()
+        local Lighting = game:GetService("Lighting")
+
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+
+        notify("FullBright", "FullBright enabled!")
+    end
+})
+
+Tabs.performance:CreateButton({
+    Title = "Anti AFK",
+    Description = "Helps you to not get kicked.",
+    Callback = function()
+        LocalPlayer.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+
+        notify("Anti-AFK", "Anti-AFK is now enabled!")
+    end
+})
+
+Tabs.performance:CreateButton({
+    Title = "Anti Lag",
+    Description = "Decrease quality to not lag.",
+    Callback = function()
+        local Lighting = game:GetService("Lighting")
+        local Terrain = workspace:FindFirstChildWhichIsA("Terrain")
+
+        if Terrain then
+            Terrain.WaterWaveSize = 0
+            Terrain.WaterWaveSpeed = 0
+            Terrain.WaterReflectance = 0
+            Terrain.WaterTransparency = 1
+        end
+
+        Lighting.GlobalShadows = false
+        Lighting.FogStart = 9e9
+        Lighting.FogEnd = 9e9
+        settings().Rendering.QualityLevel = 1
+
+        for _, v in pairs(game:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CastShadow = false
+                v.Material = Enum.Material.Plastic
+                v.Reflectance = 0
+                v.BackSurface = Enum.SurfaceType.SmoothNoOutlines
+                v.BottomSurface = Enum.SurfaceType.SmoothNoOutlines
+                v.FrontSurface = Enum.SurfaceType.SmoothNoOutlines
+                v.LeftSurface = Enum.SurfaceType.SmoothNoOutlines
+                v.RightSurface = Enum.SurfaceType.SmoothNoOutlines
+                v.TopSurface = Enum.SurfaceType.SmoothNoOutlines
+            elseif v:IsA("Decal") then
+                v.Transparency = 1
+                v.Texture = ""
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                v.Lifetime = NumberRange.new(0)
+            end
+        end
+
+        for _, v in pairs(Lighting:GetDescendants()) do
+            if v:IsA("PostEffect") then
+                v.Enabled = false
+            end
+        end
+
+        workspace.DescendantAdded:Connect(function(child)
+            task.spawn(function()
+                if child:IsA("ForceField") or child:IsA("Sparkles") or child:IsA("Smoke") or child:IsA("Fire") or child:IsA("Beam") then
+                    RunService.Heartbeat:Wait()
+                    child:Destroy()
+                elseif child:IsA("BasePart") then
+                    child.CastShadow = false
+                end
+            end)
+        end)
+    end
+})
+
+SaveManager:SetLibrary(Library)
+InterfaceManager:SetLibrary(Library)
+
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({})
+
+InterfaceManager:SetFolder("FluentEventsHub")
+SaveManager:SetFolder("FluentEventsHub/SpecificGame")
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+Window:SelectTab(1)
+Library:Notify{Title = "Fluent", Content = "Script loaded successfully!", Duration = 8}
+SaveManager:LoadAutoloadConfig()
