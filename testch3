@@ -10,6 +10,27 @@ local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
 
+local chestData = {
+    ChestBasic = "ChestBasic",
+    ChestMid = "ChestMid",
+    ChestRare = "ChestRare"
+}
+
+local crateData = {
+    Special = {
+        Name = "Special",
+        SavePath = "Special"
+    },
+    Common = {
+        Name = "Common",
+        SavePath = "Common"
+    },
+    Rare = {
+        Name = "Rare",
+        SavePath = "Rare"
+    }
+}
+
 local Window = Library:Window{
     Title = "CHub - Waste Time chapter 3",
     SubTitle = "By ??? :)",
@@ -23,7 +44,7 @@ local Window = Library:Window{
 
 local Tabs = {
     mainTab = Window:CreateTab{Title = "Main Game", Icon = "phosphor-game-controller-bold"},
-    easter = Window:CreateTab{Title = "Easter", Icon = "phosphor-egg"},
+    chest = Window:CreateTab{Title = "Chests", Icon = "phosphor-game-controller-bold"},
     upgrades = Window:CreateTab{Title = "Upgrades", Icon = "phosphor-game-controller-bold"},
     tp = Window:CreateTab{Title = "Teleports", Icon = "phosphor-fast-forward-bold"},
     stats = Window:CreateTab{Title = "Stats", Icon = "phosphor-trend-up"},
@@ -232,215 +253,95 @@ Tabs.mainTab:Paragraph("AutoAllNote", {
     ContentAlignment = Enum.TextXAlignment.Left
 })
 
-Tabs.easter:CreateToggle("CollectEggs", {
-    Title = "Collect Eggs",
+
+Tabs.chest:CreateToggle("GenerateChest", {
+    Title = "Generate Chest",
     Default = false
 }):OnChanged(function(state)
     if state then
         task.spawn(function()
-            local folder = workspace:WaitForChild("ActiveEggs")
-            local prompts = {}
+            local crateEvent = game:GetService("ReplicatedStorage"):WaitForChild("CrateEvent")
 
-            for _, obj in ipairs(folder:GetDescendants()) do
-                if obj:IsA("ProximityPrompt") then
-                    table.insert(prompts, obj)
-                end
-            end
+            local fired = {}
 
-            local connection
-            connection = folder.DescendantAdded:Connect(function(obj)
-                if obj:IsA("ProximityPrompt") then
-                    table.insert(prompts, obj)
-                end
-            end)
+            while Options.GenerateChest.Value do
+                task.wait(0.5)
 
-            while Options.CollectEggs.Value do
-                for i = #prompts, 1, -1 do
-                    local prompt = prompts[i]
+                local selected = Options.CrateSelect.Value
 
-                    if not prompt or not prompt.Parent then
-                        table.remove(prompts, i)
-                    else
-                        fireproximityprompt(prompt)
+                for name, isSelected in pairs(selected) do
+                    if isSelected and crateData[name] and not fired[name] then
+                        fired[name] = true
+
+                        local args = {
+                            "Collect",
+                            "Lobby",
+                            crateData[name]
+                        }
+
+                        crateEvent:FireServer(unpack(args))
                     end
                 end
-                task.wait(10)
-            end
-            if connection then
-                connection:Disconnect()
             end
         end)
     end
 end)
 
-local EggParagraph = Tabs.easter:CreateParagraph("Egg Notify Display", {
-    Title = "Egg Status",
-    Content = "Waiting for eggs...",
-    TitleAlignment = "Left",
-    ContentAlignment = Enum.TextXAlignment.Left
-})
-
-Tabs.easter:CreateToggle("NotifyEggs", {
-    Title = "Notify Eggs",
-    Default = false
-}):OnChanged(function(state)
-    if state then
-        task.spawn(function()
-            local folder = workspace:WaitForChild("ActiveEggs")
-
-            local function getEggName(lobbyPart)
-                local eggNameGui = lobbyPart:FindFirstChild("EggName")
-                if not eggNameGui then return "Unknown Egg" end
-
-                local shadow = eggNameGui:FindFirstChild("Shadow")
-                if not shadow then return "Unknown Egg" end
-
-                if shadow:IsA("TextLabel") or shadow:IsA("TextButton") then
-                    return shadow.Text
-                elseif shadow:IsA("StringValue") then
-                    return shadow.Value
-                end
-
-                return "Unknown Egg"
-            end
-
-            local function notifyEgg(eggName)
-                Library:Notify{
-                    Title = "EGG NOTIFIER",
-                    Content = "New Egg Spawned!!!",
-                    SubContent = eggName,
-                    Duration = 5
-                }
-            end
-
-            local function updateParagraph(eggName)
-                EggParagraph:SetValue("EGG SPAWNED - " .. eggName)
-            end
-
-            local connection
-            connection = folder.ChildAdded:Connect(function(child)
-                if child.Name == "Lobby" then
-                    task.wait(0.1)
-
-                    local eggName = getEggName(child)
-
-                    notifyEgg(eggName)
-                    updateParagraph(eggName)
-                end
-            end)
-
-            while Options.NotifyEggs.Value do
-                task.wait(1)
-            end
-
-            if connection then
-                connection:Disconnect()
-            end
-        end)
-    end
-end)
-
-local auraData = {
-    Chronos = {
-        Chance = 0.1,
-        Name = "Chronos",
-        Reward = { Type = "Rank", Value = "Chronos", BackupAmount = 35 }
-    },
-    Ethereal = {
-        Chance = 0.5,
-        Name = "Ethereal",
-        Reward = { Type = "Rank", Value = "Ethereal", BackupAmount = 15 }
-    },
-    Poseidon = {
-        Chance = 2,
-        Name = "Poseidon",
-        Reward = { Type = "Rank", Value = "Poseidon", BackupAmount = 8 }
-    },
-    Flame = {
-        Chance = 5,
-        Name = "Flame",
-        Reward = { Type = "Rank", Value = "Flame", BackupAmount = 5 }
-    }
-}
-
-local MultiDropdown = Tabs.easter:CreateDropdown("AuraSelect", {
-    Title = "Select Auras",
-    Description = "Pick the auras you want",
-    Values = {"Chronos", "Ethereal", "Poseidon", "Flame"},
+local MultiDropdown = Tabs.chest:CreateDropdown("CrateSelect", {
+    Title = "Select Crates",
+    Description = "Pick which crates to generate",
+    Values = {"Special", "Common", "Rare"},
     Multi = true,
     Default = {}
 })
 
-Tabs.easter:CreateButton({
-    Title = "Give Aura",
-    Callback = function()
-        local selected = Options.AuraSelect.Value
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local EggEvent = ReplicatedStorage:WaitForChild("EggEvent")
+Tabs.chest:CreateToggle("OpenChests", {
+    Title = "Open Chests",
+    Default = false
+}):OnChanged(function(state)
+    if state then
+        task.spawn(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local MetaRemoteEvent = ReplicatedStorage:WaitForChild("UniversalRemotes"):WaitForChild("MetaRemoteEvent")
 
-        local fired = {}
+            while Options.OpenChests.Value do
+                task.wait(0.5)
 
-        for auraName, isSelected in pairs(selected) do
-            if isSelected and auraData[auraName] and not fired[auraName] then
-                fired[auraName] = true
-                EggEvent:FireServer("CollectTest", auraData[auraName])
+                local selected = Options.ChestSelect.Value
+                local multiplier = tonumber(Options.ChestOpenAmount.Value) or 8
+
+                for chestName, isSelected in pairs(selected) do
+                    if isSelected and chestData[chestName] then
+                        local args = {
+                            "open_chest",
+                            chestData[chestName],
+                            multiplier
+                        }
+
+                        MetaRemoteEvent:FireServer(unpack(args))
+                    end
+                end
             end
-        end
+        end)
     end
+end)
+
+local ChestDropdown = Tabs.chest:CreateDropdown("ChestSelect", {
+    Title = "Select Chests",
+    Description = "Pick chests to open",
+    Values = {"ChestBasic", "ChestMid", "ChestRare"},
+    Multi = true,
+    Default = {}
 })
 
-local rerollLockAmount = 100
-
-Tabs.easter:CreateInput("RangeInput", {
-    Title = "Roll/Lock Amount",
-    Default = "10000",
-    Placeholder = "Enter amount",
-    Numeric = true,
-    Finished = false,
-    Callback = function(Value)
-        local num = tonumber(Value)
-        if num and num > 0 then
-            rerollLockAmount = num
-        end
-    end
+local AmountDropdown = Tabs.chest:CreateDropdown("ChestOpenAmount", {
+    Title = "Chest Open Amount",
+    Description = "Select how many chests to open",
+    Values = {"1", "3", "8"},
+    Multi = false,
+    Default = "8"
 })
 
-Tabs.easter:CreateButton({
-    Title = "Give Locks/Rolls",
-    Callback = function()
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local EggEvent = ReplicatedStorage:WaitForChild("EggEvent")
-
-        local lockArgs = {
-            "CollectTest",
-            {
-                Chance = 67.4,
-                ModelName = "NormalEgg",
-                Name = "Normal",
-                Reward = {
-                    Range = {1, rerollLockAmount},
-                    Type = "Lock"
-                }
-            }
-        }
-
-        local rerollArgs = {
-            "CollectTest",
-            {
-                Chance = 67.4,
-                ModelName = "NormalEgg",
-                Name = "Normal",
-                Reward = {
-                    Range = {1, rerollLockAmount},
-                    Type = "Reroll"
-                }
-            }
-        }
-
-        EggEvent:FireServer(unpack(lockArgs))
-        EggEvent:FireServer(unpack(rerollArgs))
-    end
-})
 
 Tabs.upgrades:CreateToggle("UpgradeApples", {
     Title = "Upgrade Apples",
