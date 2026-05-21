@@ -10,25 +10,13 @@ local VirtualUser = game:GetService("VirtualUser")
 
 local LocalPlayer = Players.LocalPlayer
 
+local crateEvent = game:GetService("ReplicatedStorage"):WaitForChild("CrateEvent")
+
+
 local chestData = {
     ChestBasic = "ChestBasic",
     ChestMid = "ChestMid",
-    ChestRare = "ChestRare"
-}
-
-local crateData = {
-    Special = {
-        Name = "Special",
-        SavePath = "Special"
-    },
-    Common = {
-        Name = "Common",
-        SavePath = "Common"
-    },
-    Rare = {
-        Name = "Rare",
-        SavePath = "Rare"
-    }
+    ChestSpecial = "ChestRare"
 }
 
 local Window = Library:Window{
@@ -253,47 +241,43 @@ Tabs.mainTab:Paragraph("AutoAllNote", {
     ContentAlignment = Enum.TextXAlignment.Left
 })
 
-
 Tabs.chest:CreateToggle("GenerateChest", {
     Title = "Generate Chest",
     Default = false
 }):OnChanged(function(state)
     if state then
         task.spawn(function()
-            local crateEvent = game:GetService("ReplicatedStorage"):WaitForChild("CrateEvent")
-
-            local fired = {}
 
             while Options.GenerateChest.Value do
                 task.wait(0.5)
 
-                local selected = Options.CrateSelect.Value
+                local selected = Options.CrateSelect.Value or {}
 
-                for name, isSelected in pairs(selected) do
-                    if isSelected and crateData[name] and not fired[name] then
-                        fired[name] = true
-
-                        local args = {
-                            "Collect",
-                            "Lobby",
-                            crateData[name]
-                        }
-
-                        crateEvent:FireServer(unpack(args))
-                    end
+                if selected["Special"] then
+                    crateEvent:FireServer("Collect", "Lobby", {
+                        Name = "Special",
+                        SavePath = "Special"
+                    })
                 end
+
+                if selected["Common"] then
+                    crateEvent:FireServer("Collect", "Lobby", {
+                        Name = "Common",
+                        SavePath = "Common"
+                    })
+                end
+
+                if selected["Rare"] then
+                    crateEvent:FireServer("Collect", "Lobby", {
+                        Name = "Rare",
+                        SavePath = "Rare"
+                    })
+                end
+
             end
         end)
     end
 end)
-
-local MultiDropdown = Tabs.chest:CreateDropdown("CrateSelect", {
-    Title = "Select Crates",
-    Description = "Pick which crates to generate",
-    Values = {"Special", "Common", "Rare"},
-    Multi = true,
-    Default = {}
-})
 
 Tabs.chest:CreateToggle("OpenChests", {
     Title = "Open Chests",
@@ -326,10 +310,18 @@ Tabs.chest:CreateToggle("OpenChests", {
     end
 end)
 
+Tabs.chest:CreateDropdown("CrateSelect", {
+    Title = "Select Crates",
+    Description = "Pick which crates to generate",
+    Values = {"Special", "Common", "Rare"},
+    Multi = true,
+    Default = {}
+})
+
 local ChestDropdown = Tabs.chest:CreateDropdown("ChestSelect", {
     Title = "Select Chests",
     Description = "Pick chests to open",
-    Values = {"ChestBasic", "ChestMid", "ChestRare"},
+    Values = {"ChestBasic", "ChestMid", "ChestSpecial"},
     Multi = true,
     Default = {}
 })
