@@ -16,7 +16,8 @@ local crateEvent = game:GetService("ReplicatedStorage"):WaitForChild("CrateEvent
 local chestData = {
     ChestBasic = "ChestBasic",
     ChestMid = "ChestMid",
-    ChestSpecial = "ChestRare"
+    ChestSpecial = "ChestRare",
+    ChestAdmin = "ChestEvent"
 }
 
 local Window = Library:Window{
@@ -273,6 +274,12 @@ Tabs.chest:CreateToggle("GenerateChest", {
                         SavePath = "Rare"
                     })
                 end
+                if selected["Event"] then
+                    crateEvent:FireServer("Collect", "Lobby", {
+                        Name = "Event",
+                        SavePath = "Event"
+                    })
+                end
 
             end
         end)
@@ -311,9 +318,9 @@ Tabs.chest:CreateToggle("OpenChests", {
 end)
 
 Tabs.chest:CreateDropdown("CrateSelect", {
-    Title = "Select Crates",
-    Description = "Pick which crates to generate",
-    Values = {"Special", "Common", "Rare"},
+    Title = "Select Chests",
+    Description = "Pick which Chests to generate",
+    Values = {"Common", "Rare", "Special", "Event"},
     Multi = true,
     Default = {}
 })
@@ -321,7 +328,7 @@ Tabs.chest:CreateDropdown("CrateSelect", {
 local ChestDropdown = Tabs.chest:CreateDropdown("ChestSelect", {
     Title = "Select Chests",
     Description = "Pick chests to open",
-    Values = {"ChestBasic", "ChestMid", "ChestSpecial"},
+    Values = {"ChestBasic", "ChestMid", "ChestSpecial", "ChestAdmin"},
     Multi = true,
     Default = {}
 })
