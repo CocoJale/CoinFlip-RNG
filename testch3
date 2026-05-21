@@ -33,8 +33,8 @@ local Window = Library:Window{
 
 local Tabs = {
     mainTab = Window:CreateTab{Title = "Main Game", Icon = "phosphor-game-controller-bold"},
-    chest = Window:CreateTab{Title = "Chests", Icon = "phosphor-game-controller-bold"},
-    upgrades = Window:CreateTab{Title = "Upgrades", Icon = "phosphor-game-controller-bold"},
+    chest = Window:CreateTab{Title = "Chests", Icon = "phosphor-treasure-chest"},
+    upgrades = Window:CreateTab{Title = "Upgrades", Icon = "phosphor-arrow-up"},
     tp = Window:CreateTab{Title = "Teleports", Icon = "phosphor-fast-forward-bold"},
     stats = Window:CreateTab{Title = "Stats", Icon = "phosphor-trend-up"},
     player = Window:CreateTab{Title = "Player", Icon = "phosphor-person-bold"},
